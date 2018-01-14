@@ -1,0 +1,88 @@
+#Deploy the pod
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: loyalty-level
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: loyalty-level
+        solution: stock-trader
+        version: v1
+    spec:
+      containers:
+      - name: loyalty-level
+        image: loyalty-level:latest
+        env:
+          - name: MQ_ID
+            valueFrom:
+              secretKeyRef:
+                name: mq
+                key: id
+          - name: MQ_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mq   
+                key: pwd
+          - name: MQ_HOST
+            valueFrom:
+              secretKeyRef:
+                name: mq
+                key: host
+          - name: MQ_PORT
+            valueFrom:
+              secretKeyRef:
+                name: mq   
+                key: port
+          - name: MQ_CHANNEL
+            valueFrom:
+              secretKeyRef:
+                name: mq   
+                key: channel
+          - name: MQ_QUEUE_MANAGER
+            valueFrom:
+              secretKeyRef:
+                name: mq   
+                key: queue-manager
+          - name: MQ_QUEUE
+            valueFrom:
+              secretKeyRef:
+                name: mq   
+                key: queue
+        ports:
+          - containerPort: 9080
+        imagePullPolicy: Always
+---
+#Deploy the service
+apiVersion: v1
+kind: Service
+metadata:
+  name: loyalty-level-service
+  labels:
+    app: loyalty-level
+spec:
+  type: NodePort
+  ports:
+    - port: 9080
+      name: http
+#     nodePort: 31003
+  selector:
+    app: loyalty-level
+---   
+#Configure the ingress 
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: loyalty-level-ingress
+# annotations:
+#   kubernetes.io/ingress.class: istio
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /loyalty-level
+        backend:
+          serviceName: loyalty-level-service
+          servicePort: 9080
